@@ -5,11 +5,16 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "chrome",
+            "name": "Servis Plus Web LAN",
             "request": "launch",
-            "name": "Launch Chrome against localhost",
-            "url": "http://localhost:8080",
-            "webRoot": "${workspaceFolder}"
+            "type": "dart",
+            "deviceId": "chrome",
+            "toolArgs": [
+                "--web-hostname",
+                "0.0.0.0",
+                "--web-port",
+                "8080"
+            ]
         }
     ]
 }

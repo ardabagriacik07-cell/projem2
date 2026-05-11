@@ -455,14 +455,25 @@ class _AdminShellState extends State<AdminShell> {
       CustomersScreen(repository: widget.repository),
       DevicesScreen(repository: widget.repository),
       ServicesScreen(repository: widget.repository),
+      ActionCatalogScreen(repository: widget.repository),
       OperationsScreen(repository: widget.repository),
     ];
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin Operasyon Merkezi'),
+        title: const Text('Admin Paneli'),
         actions: [
           IconButton(
+            tooltip: 'Admin sifresi',
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (context) =>
+                  AdminPasswordDialog(repository: widget.repository),
+            ),
+            icon: const Icon(Icons.lock_reset_outlined),
+          ),
+          IconButton(
+            tooltip: 'Cikis',
             onPressed: widget.repository.logout,
             icon: const Icon(Icons.logout),
           ),
@@ -471,6 +482,7 @@ class _AdminShellState extends State<AdminShell> {
       body: pages[currentIndex],
       bottomNavigationBar: NavigationBar(
         selectedIndex: currentIndex,
+        labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
         onDestinationSelected: (index) => setState(() => currentIndex = index),
         destinations: const [
           NavigationDestination(
@@ -490,9 +502,10 @@ class _AdminShellState extends State<AdminShell> {
             label: 'Servis',
           ),
           NavigationDestination(
-            icon: Icon(Icons.hub_outlined),
-            label: 'Operasyon',
+            icon: Icon(Icons.format_list_bulleted_outlined),
+            label: 'Islem',
           ),
+          NavigationDestination(icon: Icon(Icons.hub_outlined), label: 'Takip'),
         ],
       ),
     );
@@ -1035,11 +1048,7 @@ class ServicesScreen extends StatelessWidget {
                               _showSnack(context, error, true);
                               return;
                             }
-                            _showSnack(
-                              context,
-                              'Servis kaydi silindi.',
-                              false,
-                            );
+                            _showSnack(context, 'Servis kaydi silindi.', false);
                           },
                           icon: const Icon(Icons.delete_outline),
                         ),
@@ -1055,6 +1064,138 @@ class ServicesScreen extends StatelessWidget {
   }
 }
 
+class ActionCatalogScreen extends StatefulWidget {
+  const ActionCatalogScreen({super.key, required this.repository});
+
+  final AppRepository repository;
+
+  @override
+  State<ActionCatalogScreen> createState() => _ActionCatalogScreenState();
+}
+
+class _ActionCatalogScreenState extends State<ActionCatalogScreen> {
+  String selectedCategory = 'Tum';
+
+  @override
+  Widget build(BuildContext context) {
+    final actions = widget.repository.actions;
+    final categories = _actionCategories(actions);
+    final filteredActions = selectedCategory == 'Tum'
+        ? actions
+        : actions
+              .where((action) => action.displayCategory == selectedCategory)
+              .toList();
+    final groupedActions = _actionsByCategory(filteredActions);
+    final averagePrice = actions.isEmpty
+        ? 0
+        : actions.fold<double>(0, (sum, action) => sum + action.price) /
+              actions.length;
+
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        Wrap(
+          spacing: 12,
+          runSpacing: 10,
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            SizedBox(
+              width: 430,
+              child: Text(
+                'Katalogu kategoriye gore suz, fiyat araligini hizli kontrol et.',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: const Color(0xFF94A3B8),
+                ),
+              ),
+            ),
+            FilledButton.icon(
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (context) =>
+                    CreateActionDialog(repository: widget.repository),
+              ),
+              icon: const Icon(Icons.playlist_add_outlined),
+              label: const Text('Yeni Islem'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _StatsGrid(
+          items: [
+            _StatData(
+              'Islem',
+              actions.length.toString(),
+              const Color(0xFF0F766E),
+            ),
+            _StatData(
+              'Kategori',
+              categories.length.toString(),
+              const Color(0xFF2563EB),
+            ),
+            _StatData(
+              'Ortalama',
+              '${averagePrice.toStringAsFixed(0)} TL',
+              const Color(0xFFD97706),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ChoiceChip(
+              label: const Text('Tum'),
+              selected: selectedCategory == 'Tum',
+              onSelected: (_) => setState(() => selectedCategory = 'Tum'),
+            ),
+            ...categories.map(
+              (category) => Tooltip(
+                message: category,
+                child: ChoiceChip(
+                  label: Text(_shortCategoryLabel(category)),
+                  selected: selectedCategory == category,
+                  onSelected: (_) =>
+                      setState(() => selectedCategory = category),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        if (groupedActions.isEmpty)
+          const _SectionCard(
+            title: 'Islem Katalogu',
+            child: Text('Bu kategoride islem bulunmuyor.'),
+          )
+        else
+          ...groupedActions.entries.map(
+            (entry) => Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: _SectionCard(
+                title:
+                    '${_shortCategoryLabel(entry.key)} (${entry.value.length})',
+                child: Column(
+                  children: entry.value
+                      .map(
+                        (action) => _ActionCatalogTile(
+                          action: action,
+                          repository: widget.repository,
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class OperationsScreen extends StatelessWidget {
   const OperationsScreen({super.key, required this.repository});
 
@@ -1063,6 +1204,9 @@ class OperationsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final services = repository.serviceViews();
+    final pricePending = services
+        .where((item) => item.record.status == 'Fiyat Onayi Bekliyor')
+        .toList();
     final pending = services
         .where((item) => item.record.status == 'Bekliyor')
         .toList();
@@ -1080,68 +1224,36 @@ class OperationsScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        Align(
-          alignment: Alignment.centerRight,
-          child: FilledButton.icon(
-            onPressed: () => showDialog<void>(
-              context: context,
-              builder: (context) => CreateActionDialog(repository: repository),
+        _StatsGrid(
+          items: [
+            _StatData(
+              'Bekleyen',
+              pending.length.toString(),
+              const Color(0xFFF59E0B),
             ),
-            icon: const Icon(Icons.playlist_add_outlined),
-            label: const Text('Yeni Islem'),
-          ),
+            _StatData(
+              'Onay',
+              pricePending.length.toString(),
+              const Color(0xFFE11D48),
+            ),
+            _StatData(
+              'Islemde',
+              inProgress.length.toString(),
+              const Color(0xFF0284C7),
+            ),
+            _StatData(
+              'Tamam',
+              completed.length.toString(),
+              const Color(0xFF16A34A),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 18),
         _SectionCard(
-          title: 'Islem Katalogu',
+          title: 'Fiyat Onayi Bekleyen',
           child: Column(
-            children: repository.actions
-                .map(
-                  (action) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(action.name),
-                    subtitle: Text(
-                      '${action.price.toStringAsFixed(0)} TL',
-                      style: const TextStyle(color: Color(0xFF94A3B8)),
-                    ),
-                    trailing: Wrap(
-                      spacing: 8,
-                      children: [
-                        IconButton.filledTonal(
-                          tooltip: 'Duzenle',
-                          onPressed: () => showDialog<void>(
-                            context: context,
-                            builder: (context) => EditActionDialog(
-                              repository: repository,
-                              action: action,
-                            ),
-                          ),
-                          icon: const Icon(Icons.edit_outlined),
-                        ),
-                        IconButton.filledTonal(
-                          tooltip: 'Sil',
-                          style: IconButton.styleFrom(
-                            foregroundColor: const Color(0xFFFCA5A5),
-                          ),
-                          onPressed: () async {
-                            final error = await repository.deleteAction(
-                              action.id,
-                            );
-                            if (!context.mounted) {
-                              return;
-                            }
-                            if (error.isNotEmpty) {
-                              _showSnack(context, error, true);
-                              return;
-                            }
-                            _showSnack(context, 'Islem silindi.', false);
-                          },
-                          icon: const Icon(Icons.delete_outline),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
+            children: pricePending
+                .map((item) => _ServiceTile(view: item))
                 .toList(),
           ),
         ),
@@ -1169,6 +1281,187 @@ class OperationsScreen extends StatelessWidget {
                 .map((item) => _ServiceTile(view: item))
                 .toList(),
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ActionCatalogTile extends StatelessWidget {
+  const _ActionCatalogTile({required this.action, required this.repository});
+
+  final ServiceAction action;
+  final AppRepository repository;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF111827),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF1F2937)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  action.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _MiniPill(label: _shortCategoryLabel(action.displayCategory)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${action.priceRangeLabel} • Ort. ${action.price.toStringAsFixed(0)} TL',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Color(0xFF94A3B8)),
+          ),
+          if (action.description.trim().isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              action.description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Color(0xFFCBD5E1), height: 1.35),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Wrap(
+              spacing: 8,
+              children: [
+                IconButton.filledTonal(
+                  tooltip: 'Duzenle',
+                  onPressed: () => showDialog<void>(
+                    context: context,
+                    builder: (context) => EditActionDialog(
+                      repository: repository,
+                      action: action,
+                    ),
+                  ),
+                  icon: const Icon(Icons.edit_outlined),
+                ),
+                IconButton.filledTonal(
+                  tooltip: 'Sil',
+                  style: IconButton.styleFrom(
+                    foregroundColor: const Color(0xFFFCA5A5),
+                  ),
+                  onPressed: () async {
+                    final error = await repository.deleteAction(action.id);
+                    if (!context.mounted) {
+                      return;
+                    }
+                    if (error.isNotEmpty) {
+                      _showSnack(context, error, true);
+                      return;
+                    }
+                    _showSnack(context, 'Islem silindi.', false);
+                  },
+                  icon: const Icon(Icons.delete_outline),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class AdminPasswordDialog extends StatefulWidget {
+  const AdminPasswordDialog({super.key, required this.repository});
+
+  final AppRepository repository;
+
+  @override
+  State<AdminPasswordDialog> createState() => _AdminPasswordDialogState();
+}
+
+class _AdminPasswordDialogState extends State<AdminPasswordDialog> {
+  final _current = TextEditingController();
+  final _newPassword = TextEditingController();
+  final _repeat = TextEditingController();
+
+  @override
+  void dispose() {
+    _current.dispose();
+    _newPassword.dispose();
+    _repeat.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Admin Sifresi'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _current,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Mevcut Sifre'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _newPassword,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Yeni Sifre'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _repeat,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Yeni Sifre Tekrar'),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Kapat'),
+        ),
+        FilledButton(
+          onPressed: () async {
+            if (_newPassword.text.length < 5) {
+              _showSnack(context, 'Yeni sifre en az 5 karakter olmali.', true);
+              return;
+            }
+            if (_newPassword.text != _repeat.text) {
+              _showSnack(context, 'Yeni sifreler eslesmiyor.', true);
+              return;
+            }
+
+            final error = await widget.repository.changeAdminPassword(
+              currentPassword: _current.text,
+              newPassword: _newPassword.text,
+            );
+            if (!context.mounted) {
+              return;
+            }
+            if (error.isNotEmpty) {
+              _showSnack(context, error, true);
+              return;
+            }
+            Navigator.of(context).pop();
+            _showSnack(context, 'Admin sifresi guncellendi.', false);
+          },
+          child: const Text('Guncelle'),
         ),
       ],
     );
@@ -1482,66 +1775,64 @@ class _CreateServiceRecordDialogState extends State<CreateServiceRecordDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Servis Kaydi'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<int>(
-              initialValue: selectedDeviceId,
-              items: widget.repository.devices
-                  .map(
-                    (device) => DropdownMenuItem(
-                      value: device.id,
-                      child: Text('${device.brand} ${device.model}'),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) => setState(() => selectedDeviceId = value),
-              decoration: const InputDecoration(labelText: 'Cihaz'),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: status,
-              items: serviceStatusOptions
-                  .map(
-                    (item) => DropdownMenuItem(value: item, child: Text(item)),
-                  )
-                  .toList(),
-              onChanged: (value) =>
-                  setState(() => status = value ?? 'Bekliyor'),
-              decoration: const InputDecoration(labelText: 'Durum'),
-            ),
-            const SizedBox(height: 12),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Fiyati onaya gonder'),
-              subtitle: const Text(
-                'Secili islem tutari musterinin onayina duser.',
+      content: SizedBox(
+        width: 720,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<int>(
+                initialValue: selectedDeviceId,
+                items: widget.repository.devices
+                    .map(
+                      (device) => DropdownMenuItem(
+                        value: device.id,
+                        child: Text('${device.brand} ${device.model}'),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) => setState(() => selectedDeviceId = value),
+                decoration: const InputDecoration(labelText: 'Cihaz'),
               ),
-              value: sendPriceApproval,
-              onChanged: (value) =>
-                  setState(() => sendPriceApproval = value),
-            ),
-            const SizedBox(height: 12),
-            ...widget.repository.actions.map(
-              (action) => CheckboxListTile(
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: status,
+                items: serviceStatusOptions
+                    .map(
+                      (item) =>
+                          DropdownMenuItem(value: item, child: Text(item)),
+                    )
+                    .toList(),
+                onChanged: (value) =>
+                    setState(() => status = value ?? 'Bekliyor'),
+                decoration: const InputDecoration(labelText: 'Durum'),
+              ),
+              const SizedBox(height: 12),
+              SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                value: selectedActionIds.contains(action.id),
-                title: Text(
-                  '${action.name} • ${action.price.toStringAsFixed(0)} TL',
+                title: const Text('Fiyati onaya gonder'),
+                subtitle: const Text(
+                  'Secili islem tutari musterinin onayina duser.',
                 ),
-                onChanged: (selected) {
+                value: sendPriceApproval,
+                onChanged: (value) => setState(() => sendPriceApproval = value),
+              ),
+              const SizedBox(height: 12),
+              _ServiceActionSelector(
+                actions: widget.repository.actions,
+                selectedActionIds: selectedActionIds,
+                onActionChanged: (actionId, selected) {
                   setState(() {
-                    if (selected ?? false) {
-                      selectedActionIds.add(action.id);
+                    if (selected) {
+                      selectedActionIds.add(actionId);
                     } else {
-                      selectedActionIds.remove(action.id);
+                      selectedActionIds.remove(actionId);
                     }
                   });
                 },
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       actions: [
@@ -1586,7 +1877,8 @@ class EditServiceRecordDialog extends StatefulWidget {
   final ServiceRecord record;
 
   @override
-  State<EditServiceRecordDialog> createState() => _EditServiceRecordDialogState();
+  State<EditServiceRecordDialog> createState() =>
+      _EditServiceRecordDialogState();
 }
 
 class _EditServiceRecordDialogState extends State<EditServiceRecordDialog> {
@@ -1600,73 +1892,71 @@ class _EditServiceRecordDialogState extends State<EditServiceRecordDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Servis Kaydini Duzenle'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<int>(
-              initialValue: selectedDeviceId,
-              items: widget.repository.devices
-                  .map(
-                    (device) => DropdownMenuItem(
-                      value: device.id,
-                      child: Text('${device.brand} ${device.model}'),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() => selectedDeviceId = value);
-                }
-              },
-              decoration: const InputDecoration(labelText: 'Cihaz'),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: status,
-              items: serviceStatusOptions
-                  .map(
-                    (item) => DropdownMenuItem(value: item, child: Text(item)),
-                  )
-                  .toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() => status = value);
-                }
-              },
-              decoration: const InputDecoration(labelText: 'Durum'),
-            ),
-            const SizedBox(height: 12),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Fiyati onaya gonder'),
-              subtitle: Text(
-                'Mevcut durum: ${widget.record.priceApprovalStatus}',
+      content: SizedBox(
+        width: 720,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<int>(
+                initialValue: selectedDeviceId,
+                items: widget.repository.devices
+                    .map(
+                      (device) => DropdownMenuItem(
+                        value: device.id,
+                        child: Text('${device.brand} ${device.model}'),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => selectedDeviceId = value);
+                  }
+                },
+                decoration: const InputDecoration(labelText: 'Cihaz'),
               ),
-              value: sendPriceApproval,
-              onChanged: (value) =>
-                  setState(() => sendPriceApproval = value),
-            ),
-            const SizedBox(height: 12),
-            ...widget.repository.actions.map(
-              (action) => CheckboxListTile(
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: status,
+                items: serviceStatusOptions
+                    .map(
+                      (item) =>
+                          DropdownMenuItem(value: item, child: Text(item)),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => status = value);
+                  }
+                },
+                decoration: const InputDecoration(labelText: 'Durum'),
+              ),
+              const SizedBox(height: 12),
+              SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                value: selectedActionIds.contains(action.id),
-                title: Text(
-                  '${action.name} • ${action.price.toStringAsFixed(0)} TL',
+                title: const Text('Fiyati onaya gonder'),
+                subtitle: Text(
+                  'Mevcut durum: ${widget.record.priceApprovalStatus}',
                 ),
-                onChanged: (selected) {
+                value: sendPriceApproval,
+                onChanged: (value) => setState(() => sendPriceApproval = value),
+              ),
+              const SizedBox(height: 12),
+              _ServiceActionSelector(
+                actions: widget.repository.actions,
+                selectedActionIds: selectedActionIds,
+                onActionChanged: (actionId, selected) {
                   setState(() {
-                    if (selected ?? false) {
-                      selectedActionIds.add(action.id);
+                    if (selected) {
+                      selectedActionIds.add(actionId);
                     } else {
-                      selectedActionIds.remove(action.id);
+                      selectedActionIds.remove(actionId);
                     }
                   });
                 },
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       actions: [
@@ -1701,6 +1991,270 @@ class _EditServiceRecordDialogState extends State<EditServiceRecordDialog> {
   }
 }
 
+class _ServiceActionSelector extends StatefulWidget {
+  const _ServiceActionSelector({
+    required this.actions,
+    required this.selectedActionIds,
+    required this.onActionChanged,
+  });
+
+  final List<ServiceAction> actions;
+  final Set<int> selectedActionIds;
+  final void Function(int actionId, bool selected) onActionChanged;
+
+  @override
+  State<_ServiceActionSelector> createState() => _ServiceActionSelectorState();
+}
+
+class _ServiceActionSelectorState extends State<_ServiceActionSelector> {
+  final TextEditingController _search = TextEditingController();
+  String selectedCategory = 'Tum';
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categories = _actionCategories(widget.actions);
+    final query = _search.text.trim().toLowerCase();
+    final filteredActions = widget.actions.where((action) {
+      final matchesCategory =
+          selectedCategory == 'Tum' ||
+          action.displayCategory == selectedCategory;
+      final matchesQuery =
+          query.isEmpty ||
+          action.name.toLowerCase().contains(query) ||
+          action.description.toLowerCase().contains(query);
+      return matchesCategory && matchesQuery;
+    }).toList();
+    final groupedActions = _actionsByCategory(filteredActions);
+    final selectedTotal = widget.actions
+        .where((action) => widget.selectedActionIds.contains(action.id))
+        .fold<double>(0, (sum, action) => sum + action.price);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _SelectorStat(
+                label: 'Secili',
+                value: widget.selectedActionIds.length.toString(),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _SelectorStat(
+                label: 'Tutar',
+                value: '${selectedTotal.toStringAsFixed(0)} TL',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _search,
+          onChanged: (_) => setState(() {}),
+          decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.search),
+            labelText: 'Islem ara',
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ChoiceChip(
+              label: const Text('Tum'),
+              selected: selectedCategory == 'Tum',
+              onSelected: (_) => setState(() => selectedCategory = 'Tum'),
+            ),
+            ...categories.map(
+              (category) => Tooltip(
+                message: category,
+                child: ChoiceChip(
+                  label: Text(_shortCategoryLabel(category)),
+                  selected: selectedCategory == category,
+                  onSelected: (_) =>
+                      setState(() => selectedCategory = category),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (groupedActions.isEmpty)
+          const Text('Bu filtrede islem bulunmuyor.')
+        else
+          ...groupedActions.entries.map(
+            (entry) => _ActionSelectorGroup(
+              category: entry.key,
+              actions: entry.value,
+              selectedActionIds: widget.selectedActionIds,
+              initiallyExpanded:
+                  selectedCategory != 'Tum' ||
+                  entry.value.any(
+                    (action) => widget.selectedActionIds.contains(action.id),
+                  ),
+              onActionChanged: widget.onActionChanged,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _SelectorStat extends StatelessWidget {
+  const _SelectorStat({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF1F2937)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: Color(0xFF94A3B8))),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionSelectorGroup extends StatelessWidget {
+  const _ActionSelectorGroup({
+    required this.category,
+    required this.actions,
+    required this.selectedActionIds,
+    required this.initiallyExpanded,
+    required this.onActionChanged,
+  });
+
+  final String category;
+  final List<ServiceAction> actions;
+  final Set<int> selectedActionIds;
+  final bool initiallyExpanded;
+  final void Function(int actionId, bool selected) onActionChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedCount = actions
+        .where((action) => selectedActionIds.contains(action.id))
+        .length;
+
+    return ExpansionTile(
+      initiallyExpanded: initiallyExpanded,
+      tilePadding: EdgeInsets.zero,
+      title: Text(
+        _shortCategoryLabel(category),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontWeight: FontWeight.w800),
+      ),
+      subtitle: Text(
+        selectedCount == 0
+            ? '${actions.length} islem'
+            : '$selectedCount secili / ${actions.length}',
+      ),
+      children: actions.map((action) {
+        final selected = selectedActionIds.contains(action.id);
+        return InkWell(
+          onTap: () => onActionChanged(action.id, !selected),
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: selected
+                  ? const Color(0xFF0F2F2E)
+                  : const Color(0xFF111827),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: selected
+                    ? const Color(0xFF22C55E)
+                    : const Color(0xFF1F2937),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Checkbox(
+                  value: selected,
+                  onChanged: (value) =>
+                      onActionChanged(action.id, value ?? false),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              action.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '${action.price.toStringAsFixed(0)} TL',
+                            style: const TextStyle(
+                              color: Color(0xFF93C5FD),
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        action.priceRangeLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Color(0xFF5EEAD4)),
+                      ),
+                      if (action.description.trim().isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          action.description,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Color(0xFFCBD5E1)),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
 class CreateActionDialog extends StatefulWidget {
   const CreateActionDialog({super.key, required this.repository});
 
@@ -1712,12 +2266,20 @@ class CreateActionDialog extends StatefulWidget {
 
 class _CreateActionDialogState extends State<CreateActionDialog> {
   final _name = TextEditingController();
+  final _category = TextEditingController(text: 'Genel');
+  final _minPrice = TextEditingController();
+  final _maxPrice = TextEditingController();
   final _price = TextEditingController();
+  final _description = TextEditingController();
 
   @override
   void dispose() {
     _name.dispose();
+    _category.dispose();
+    _minPrice.dispose();
+    _maxPrice.dispose();
     _price.dispose();
+    _description.dispose();
     super.dispose();
   }
 
@@ -1735,11 +2297,46 @@ class _CreateActionDialogState extends State<CreateActionDialog> {
             ),
             const SizedBox(height: 12),
             TextField(
+              controller: _category,
+              decoration: const InputDecoration(labelText: 'Kategori'),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _minPrice,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(labelText: 'Min Fiyat'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: _maxPrice,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(labelText: 'Max Fiyat'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
               controller: _price,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
-              decoration: const InputDecoration(labelText: 'Fiyat'),
+              decoration: const InputDecoration(labelText: 'Ortalama Fiyat'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _description,
+              maxLines: 3,
+              decoration: const InputDecoration(labelText: 'Aciklama'),
             ),
           ],
         ),
@@ -1751,14 +2348,30 @@ class _CreateActionDialogState extends State<CreateActionDialog> {
         ),
         FilledButton(
           onPressed: () async {
-            final price = double.tryParse(_price.text.replaceAll(',', '.'));
-            if (_name.text.trim().isEmpty || price == null) {
-              _showSnack(context, 'Islem adi ve fiyat gerekli.', true);
+            final minPrice = _parseMoney(_minPrice.text);
+            final maxPrice = _parseMoney(_maxPrice.text);
+            final price = _effectiveActionPrice(
+              _parseMoney(_price.text),
+              minPrice,
+              maxPrice,
+            );
+            if (_name.text.trim().isEmpty ||
+                _category.text.trim().isEmpty ||
+                price <= 0) {
+              _showSnack(
+                context,
+                'Islem adi, kategori ve fiyat gerekli.',
+                true,
+              );
               return;
             }
             final error = await widget.repository.createAction(
               name: _name.text,
               price: price,
+              category: _category.text,
+              minPrice: minPrice,
+              maxPrice: maxPrice,
+              description: _description.text,
             );
             if (!context.mounted) {
               return;
@@ -1795,14 +2408,30 @@ class _EditActionDialogState extends State<EditActionDialog> {
   late final TextEditingController _name = TextEditingController(
     text: widget.action.name,
   );
+  late final TextEditingController _category = TextEditingController(
+    text: widget.action.displayCategory,
+  );
+  late final TextEditingController _minPrice = TextEditingController(
+    text: _moneyInput(widget.action.minPrice),
+  );
+  late final TextEditingController _maxPrice = TextEditingController(
+    text: _moneyInput(widget.action.maxPrice),
+  );
   late final TextEditingController _price = TextEditingController(
     text: widget.action.price.toStringAsFixed(0),
+  );
+  late final TextEditingController _description = TextEditingController(
+    text: widget.action.description,
   );
 
   @override
   void dispose() {
     _name.dispose();
+    _category.dispose();
+    _minPrice.dispose();
+    _maxPrice.dispose();
     _price.dispose();
+    _description.dispose();
     super.dispose();
   }
 
@@ -1820,11 +2449,46 @@ class _EditActionDialogState extends State<EditActionDialog> {
             ),
             const SizedBox(height: 12),
             TextField(
+              controller: _category,
+              decoration: const InputDecoration(labelText: 'Kategori'),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _minPrice,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(labelText: 'Min Fiyat'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: _maxPrice,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(labelText: 'Max Fiyat'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
               controller: _price,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
-              decoration: const InputDecoration(labelText: 'Fiyat'),
+              decoration: const InputDecoration(labelText: 'Ortalama Fiyat'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _description,
+              maxLines: 3,
+              decoration: const InputDecoration(labelText: 'Aciklama'),
             ),
           ],
         ),
@@ -1836,15 +2500,31 @@ class _EditActionDialogState extends State<EditActionDialog> {
         ),
         FilledButton(
           onPressed: () async {
-            final price = double.tryParse(_price.text.replaceAll(',', '.'));
-            if (_name.text.trim().isEmpty || price == null) {
-              _showSnack(context, 'Islem adi ve fiyat gerekli.', true);
+            final minPrice = _parseMoney(_minPrice.text);
+            final maxPrice = _parseMoney(_maxPrice.text);
+            final price = _effectiveActionPrice(
+              _parseMoney(_price.text),
+              minPrice,
+              maxPrice,
+            );
+            if (_name.text.trim().isEmpty ||
+                _category.text.trim().isEmpty ||
+                price <= 0) {
+              _showSnack(
+                context,
+                'Islem adi, kategori ve fiyat gerekli.',
+                true,
+              );
               return;
             }
             final error = await widget.repository.updateAction(
               actionId: widget.action.id,
               name: _name.text,
               price: price,
+              category: _category.text,
+              minPrice: minPrice,
+              maxPrice: maxPrice,
+              description: _description.text,
             );
             if (!context.mounted) {
               return;
@@ -1872,6 +2552,60 @@ const List<String> serviceStatusOptions = [
   'Fiyat Reddedildi',
 ];
 
+List<String> _actionCategories(List<ServiceAction> actions) {
+  final categories =
+      actions.map((action) => action.displayCategory).toSet().toList()..sort();
+  return categories;
+}
+
+Map<String, List<ServiceAction>> _actionsByCategory(
+  List<ServiceAction> actions,
+) {
+  final grouped = <String, List<ServiceAction>>{};
+  for (final action in actions) {
+    grouped.putIfAbsent(action.displayCategory, () => []).add(action);
+  }
+
+  final sortedEntries = grouped.entries.toList()
+    ..sort((a, b) => a.key.compareTo(b.key));
+  return {
+    for (final entry in sortedEntries)
+      entry.key: entry.value..sort((a, b) => a.name.compareTo(b.name)),
+  };
+}
+
+double _parseMoney(String value) {
+  var normalized = value.trim().replaceAll(' ', '');
+  if (normalized.contains(',') && normalized.contains('.')) {
+    normalized = normalized.replaceAll('.', '').replaceAll(',', '.');
+  } else {
+    normalized = normalized.replaceAll(',', '.');
+  }
+  return double.tryParse(normalized) ?? 0;
+}
+
+double _effectiveActionPrice(double price, double minPrice, double maxPrice) {
+  if (price > 0) {
+    return price;
+  }
+  if (minPrice > 0 && maxPrice > 0) {
+    return (minPrice + maxPrice) / 2;
+  }
+  return 0;
+}
+
+String _moneyInput(double value) => value <= 0 ? '' : value.toStringAsFixed(0);
+
+String _shortCategoryLabel(String category) {
+  return switch (category.trim()) {
+    'Yazilim & Destek' => 'Yazilim',
+    'Oyun Konsolu' => 'Konsol',
+    'Masaustu' => 'PC',
+    '' => 'Genel',
+    _ => category.trim(),
+  };
+}
+
 class _ServiceTile extends StatelessWidget {
   const _ServiceTile({
     required this.view,
@@ -1885,10 +2619,6 @@ class _ServiceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final actions = view.actions.isEmpty
-        ? 'Henuz islem atanmis degil'
-        : view.actions.map((action) => action.name).join(', ');
-
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -1900,33 +2630,115 @@ class _ServiceTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Text(
+            '${view.device.brand} ${view.device.model}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              Expanded(
-                child: Text(
-                  '${view.device.brand} ${view.device.model}',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-              if (trailing != null) ...[
-                trailing!,
-                const SizedBox(width: 8),
-              ],
               _StatusChip(status: view.record.status),
+              if (view.record.priceApprovalStatus.isNotEmpty)
+                _MiniPill(label: 'Onay: ${view.record.priceApprovalStatus}'),
+              _MiniPill(
+                label: '${view.record.totalPrice.toStringAsFixed(0)} TL',
+              ),
             ],
           ),
-          const SizedBox(height: 8),
+          if (trailing != null) ...[
+            const SizedBox(height: 10),
+            Align(alignment: Alignment.centerRight, child: trailing!),
+          ],
+          const SizedBox(height: 10),
           if (showMember)
-            Text('${view.member.fullName} • ${view.member.phone}'),
-          Text('Ariza: ${view.device.issueDescription}'),
-          Text('Islemler: $actions'),
-          Text('Tutar: ${view.record.totalPrice.toStringAsFixed(0)} TL'),
-          if (view.record.priceApprovalStatus.isNotEmpty)
-            Text('Fiyat onayi: ${view.record.priceApprovalStatus}'),
+            _InfoLine(
+              icon: Icons.person_outline,
+              text: '${view.member.fullName} • ${view.member.phone}',
+            ),
+          _InfoLine(
+            icon: Icons.report_problem_outlined,
+            text: view.device.issueDescription,
+          ),
+          const SizedBox(height: 10),
+          _ActionSummaryChips(actions: view.actions),
         ],
       ),
     );
   }
+}
+
+class _InfoLine extends StatelessWidget {
+  const _InfoLine({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: const Color(0xFF94A3B8)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Color(0xFFCBD5E1), height: 1.35),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionSummaryChips extends StatelessWidget {
+  const _ActionSummaryChips({required this.actions});
+
+  final List<ServiceAction> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    if (actions.isEmpty) {
+      return const _MiniPill(label: 'Islem atanmadı');
+    }
+
+    final visibleActions = actions.take(3).toList();
+    final hiddenCount = actions.length - visibleActions.length;
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        ...visibleActions.map(
+          (action) => Tooltip(
+            message: action.name,
+            child: _MiniPill(
+              label:
+                  '${_compactActionName(action.name)} • ${_shortCategoryLabel(action.displayCategory)}',
+            ),
+          ),
+        ),
+        if (hiddenCount > 0) _MiniPill(label: '+$hiddenCount islem'),
+      ],
+    );
+  }
+}
+
+String _compactActionName(String value) {
+  final trimmed = value.trim();
+  if (trimmed.length <= 22) {
+    return trimmed;
+  }
+  return '${trimmed.substring(0, 21)}...';
 }
 
 class _StatusChip extends StatelessWidget {
@@ -1954,7 +2766,38 @@ class _StatusChip extends StatelessWidget {
       ),
       child: Text(
         status,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(color: color, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
+class _MiniPill extends StatelessWidget {
+  const _MiniPill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 220),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFF334155)),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: Color(0xFFCBD5E1),
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
@@ -1976,6 +2819,8 @@ class _SectionCard extends StatelessWidget {
           children: [
             Text(
               title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(
                 context,
               ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),

@@ -91,6 +91,25 @@ class AppRepository extends ChangeNotifier {
     });
   }
 
+  Future<String> changeAdminPassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    if ((_activeAdminUsername ?? '').isEmpty) {
+      return 'Admin oturumu bulunamadi.';
+    }
+
+    return _run(() async {
+      final data = await _postJson('admin/password', {
+        'adminUsername': _activeAdminUsername,
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      });
+      _applyAdminSync(data);
+      return '';
+    });
+  }
+
   Future<String> sendPasswordResetCode(String email) async {
     return _runMessage(() async {
       final data = await _postJson('member/password-reset-code', {
@@ -271,6 +290,10 @@ class AppRepository extends ChangeNotifier {
   Future<String> createAction({
     required String name,
     required double price,
+    required String category,
+    required double minPrice,
+    required double maxPrice,
+    required String description,
   }) async {
     if ((_activeAdminUsername ?? '').isEmpty) {
       return 'Admin oturumu bulunamadi.';
@@ -281,6 +304,10 @@ class AppRepository extends ChangeNotifier {
         'adminUsername': _activeAdminUsername,
         'name': name.trim(),
         'price': price,
+        'category': category.trim(),
+        'minPrice': minPrice,
+        'maxPrice': maxPrice,
+        'description': description.trim(),
       });
       _applyAdminSync(data);
       return '';
@@ -291,6 +318,10 @@ class AppRepository extends ChangeNotifier {
     required int actionId,
     required String name,
     required double price,
+    required String category,
+    required double minPrice,
+    required double maxPrice,
+    required String description,
   }) async {
     if ((_activeAdminUsername ?? '').isEmpty) {
       return 'Admin oturumu bulunamadi.';
@@ -301,6 +332,10 @@ class AppRepository extends ChangeNotifier {
         'adminUsername': _activeAdminUsername,
         'name': name.trim(),
         'price': price,
+        'category': category.trim(),
+        'minPrice': minPrice,
+        'maxPrice': maxPrice,
+        'description': description.trim(),
       });
       _applyAdminSync(data);
       return '';
@@ -607,6 +642,10 @@ class AppRepository extends ChangeNotifier {
       id: json['id'] as int,
       name: json['name'] as String,
       price: (json['price'] as num).toDouble(),
+      category: json['category'] as String? ?? 'Genel',
+      minPrice: (json['minPrice'] as num?)?.toDouble() ?? 0,
+      maxPrice: (json['maxPrice'] as num?)?.toDouble() ?? 0,
+      description: json['description'] as String? ?? '',
     );
   }
 
@@ -622,9 +661,7 @@ class AppRepository extends ChangeNotifier {
           .toList(growable: false),
       priceApprovalStatus: json['priceApprovalStatus'] as String? ?? '',
       priceApprovalSentAt: _dateTimeOrNull(json['priceApprovalSentAt']),
-      priceApprovalAnsweredAt: _dateTimeOrNull(
-        json['priceApprovalAnsweredAt'],
-      ),
+      priceApprovalAnsweredAt: _dateTimeOrNull(json['priceApprovalAnsweredAt']),
     );
   }
 
@@ -642,7 +679,25 @@ class AppRepository extends ChangeNotifier {
     }
 
     if (kIsWeb) {
-      return '${Uri.base.origin}/api/mobile';
+      const apiPort = int.fromEnvironment('API_PORT', defaultValue: 5106);
+      const apiScheme = String.fromEnvironment(
+        'API_SCHEME',
+        defaultValue: 'http',
+      );
+      final pageUri = Uri.base;
+
+      if (pageUri.hasPort == false ||
+          pageUri.port == apiPort ||
+          pageUri.port == 7202) {
+        return '${pageUri.origin}/api/mobile';
+      }
+
+      return Uri(
+        scheme: apiScheme,
+        host: pageUri.host,
+        port: apiPort,
+        path: 'api/mobile',
+      ).toString();
     }
 
     switch (defaultTargetPlatform) {

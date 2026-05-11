@@ -1,4 +1,3 @@
-
 enum UserRole { member, admin }
 
 final class AdminUser {
@@ -98,11 +97,29 @@ final class ServiceAction {
     required this.id,
     required this.name,
     required this.price,
+    required this.category,
+    required this.minPrice,
+    required this.maxPrice,
+    required this.description,
   });
 
   final int id;
   final String name;
   final double price;
+  final String category;
+  final double minPrice;
+  final double maxPrice;
+  final String description;
+
+  String get displayCategory => category.trim().isEmpty ? 'Genel' : category;
+
+  String get priceRangeLabel {
+    if (minPrice <= 0 && maxPrice <= 0) {
+      return '${price.toStringAsFixed(0)} TL';
+    }
+
+    return '${minPrice.toStringAsFixed(0)} - ${maxPrice.toStringAsFixed(0)} TL';
+  }
 }
 
 final class ServiceRecord {
