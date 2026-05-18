@@ -5,7 +5,7 @@ void main() {
   testWidgets('auth gateway renders', (tester) async {
     await tester.pumpWidget(const ServicePlusApp());
 
-    expect(find.text('Servis Plus Mobile'), findsOneWidget);
+    expect(find.text('Servis Plus Mobile'), findsWidgets);
     expect(find.text('Uye Giris'), findsOneWidget);
   });
 }

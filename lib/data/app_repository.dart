@@ -27,6 +27,7 @@ class AppRepository extends ChangeNotifier {
   bool get isMemberAuthenticated => _activeRole == UserRole.member;
   bool get isAdminAuthenticated => _activeRole == UserRole.admin;
   bool get isBusy => _isBusy;
+  String? get activeAdminUsername => _activeAdminUsername;
   Member? get currentMember {
     if (_activeMemberId == null) {
       return null;
@@ -93,7 +94,8 @@ class AppRepository extends ChangeNotifier {
 
   Future<String> changeAdminPassword({
     required String currentPassword,
-    required String newPassword,
+    String? newPassword,
+    String? newUsername,
   }) async {
     if ((_activeAdminUsername ?? '').isEmpty) {
       return 'Admin oturumu bulunamadi.';
@@ -103,7 +105,8 @@ class AppRepository extends ChangeNotifier {
       final data = await _postJson('admin/password', {
         'adminUsername': _activeAdminUsername,
         'currentPassword': currentPassword,
-        'newPassword': newPassword,
+        'newPassword': (newPassword ?? '').trim(),
+        'newUsername': (newUsername ?? '').trim(),
       });
       _applyAdminSync(data);
       return '';
@@ -173,6 +176,26 @@ class AppRepository extends ChangeNotifier {
         'model': model.trim(),
         'issueDescription': issueDescription.trim(),
       });
+      _applyMemberSync(data);
+      return (data['message'] as String?) ?? '';
+    });
+  }
+
+  Future<String> answerPriceOffer({
+    required int serviceId,
+    required bool accepted,
+  }) async {
+    final member = currentMember;
+    if (member == null) {
+      return 'Aktif uye bulunamadi.';
+    }
+
+    final answerPath = accepted ? 'accept' : 'reject';
+    return _run(() async {
+      final data = await _postJson(
+        'member/${member.id}/services/$serviceId/price-offer/$answerPath',
+        {},
+      );
       _applyMemberSync(data);
       return (data['message'] as String?) ?? '';
     });

@@ -40,42 +40,68 @@ class _ServicePlusAppState extends State<ServicePlusApp> {
   }
 
   ThemeData _buildTheme() {
-    const seed = Color(0xFF3B82F6);
+    const primary = Color(0xFF0B1F3A);
+    const secondary = Color(0xFF2563EB);
+    const background = Color(0xFFF3F7FC);
+    const surface = Color(0xFFFFFFFF);
+    const border = Color(0xFFD7E2F0);
+
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: primary,
+          brightness: Brightness.light,
+        ).copyWith(
+          primary: primary,
+          secondary: secondary,
+          tertiary: const Color(0xFF0F766E),
+          surface: surface,
+          surfaceContainerHighest: const Color(0xFFEAF2FB),
+          error: const Color(0xFFDC2626),
+        );
 
     return ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: seed,
-        brightness: Brightness.dark,
+      colorScheme: scheme,
+      scaffoldBackgroundColor: background,
+      textTheme: const TextTheme(
+        headlineMedium: TextStyle(fontWeight: FontWeight.w900),
+        titleLarge: TextStyle(fontWeight: FontWeight.w800),
+        titleMedium: TextStyle(fontWeight: FontWeight.w800),
+        bodyMedium: TextStyle(height: 1.35),
       ),
-      scaffoldBackgroundColor: const Color(0xFF020617),
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF020617),
-        foregroundColor: Color(0xFFF8FAFC),
+        backgroundColor: surface,
+        foregroundColor: Color(0xFF111827),
         elevation: 0,
+        centerTitle: false,
+        surfaceTintColor: Colors.transparent,
       ),
       cardTheme: CardThemeData(
-        color: const Color(0xFF0F172A),
-        elevation: 0,
+        color: surface,
+        elevation: 2,
+        shadowColor: const Color(0x1A0F172A),
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: Color(0xFF1E293B)),
+          side: const BorderSide(color: border),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFF111827),
+        fillColor: const Color(0xFFF8FAFC),
+        labelStyle: const TextStyle(color: Color(0xFF64748B)),
+        prefixIconColor: const Color(0xFF64748B),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF334155)),
+          borderSide: const BorderSide(color: border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF334155)),
+          borderSide: const BorderSide(color: border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+          borderSide: const BorderSide(color: primary, width: 1.5),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -85,10 +111,29 @@ class _ServicePlusAppState extends State<ServicePlusApp> {
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: const Color(0xFF020617),
+        backgroundColor: surface,
+        elevation: 8,
+        shadowColor: const Color(0x1A0F172A),
         indicatorShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),
+      ),
+      tabBarTheme: const TabBarThemeData(
+        dividerColor: Colors.transparent,
+        labelColor: primary,
+        unselectedLabelColor: Color(0xFF64748B),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: const Color(0xFFF1F5F9),
+        selectedColor: const Color(0xFFDDF7EE),
+        side: const BorderSide(color: border),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      dividerTheme: const DividerThemeData(color: border, thickness: 1),
+      dialogTheme: DialogThemeData(
+        backgroundColor: surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -153,222 +198,577 @@ class _AuthGatewayScreenState extends State<AuthGatewayScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF020617),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(22),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF0D6EFD), Color(0xFF11B980)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    child: const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _HeroBadge(label: 'Servis Plus Mobile'),
-                        SizedBox(height: 16),
-                        Text(
-                          'Devam etmek icin giris yap.',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 30,
-                            height: 1.08,
-                            fontWeight: FontWeight.w900,
-                          ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 900;
+            final authCard = _AuthCard(
+              controller: _tabController,
+              memberLogin: _buildMemberLogin(context),
+              register: _buildRegister(context),
+              adminLogin: _buildAdminLogin(context),
+            );
+
+            return Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(18, 20, 18, 28),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: wide ? 1080 : 560),
+                  child: wide
+                      ? Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            const Expanded(child: _AuthShowcase()),
+                            const SizedBox(width: 22),
+                            SizedBox(width: 430, child: authCard),
+                          ],
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const _AuthShowcase(compact: true),
+                            const SizedBox(height: 16),
+                            authCard,
+                          ],
                         ),
-                        SizedBox(height: 10),
-                        Text(
-                          'Uye paneli, servis talepleri ve admin operasyon merkezi giristen sonra acilir.',
-                          style: TextStyle(
-                            color: Color(0xFFEFF6FF),
-                            height: 1.45,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          TabBar(
-                            controller: _tabController,
-                            tabs: const [
-                              Tab(text: 'Uye Giris'),
-                              Tab(text: 'Kayit'),
-                              Tab(text: 'Admin'),
-                            ],
-                          ),
-                          const SizedBox(height: 18),
-                          SizedBox(
-                            height: 470,
-                            child: TabBarView(
-                              controller: _tabController,
-                              children: [
-                                _buildMemberLogin(context),
-                                _buildRegister(context),
-                                _buildAdminLogin(context),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
   }
 
   Widget _buildMemberLogin(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return _AuthFormLayout(
       children: [
         TextField(
           controller: _memberLoginEmail,
-          decoration: const InputDecoration(labelText: 'Email'),
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(
+            labelText: 'Email',
+            prefixIcon: Icon(Icons.alternate_email_outlined),
+          ),
         ),
         const SizedBox(height: 14),
         TextField(
           controller: _memberLoginPassword,
           obscureText: true,
-          decoration: const InputDecoration(labelText: 'Sifre'),
+          decoration: const InputDecoration(
+            labelText: 'Sifre',
+            prefixIcon: Icon(Icons.lock_outline),
+          ),
         ),
         const SizedBox(height: 18),
-        FilledButton(
-          onPressed: () async {
-            final error = await widget.repository.loginMember(
-              email: _memberLoginEmail.text,
-              password: _memberLoginPassword.text,
-            );
-            if (!context.mounted) {
-              return;
-            }
-            if (error.isNotEmpty) {
-              _showSnack(context, error, true);
-            }
-          },
-          child: const Text('Panele Gir'),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: () async {
+              final error = await widget.repository.loginMember(
+                email: _memberLoginEmail.text,
+                password: _memberLoginPassword.text,
+              );
+              if (!context.mounted) {
+                return;
+              }
+              if (error.isNotEmpty) {
+                _showSnack(context, error, true);
+              }
+            },
+            icon: const Icon(Icons.login_outlined),
+            label: const Text('Panele Gir'),
+          ),
         ),
         const SizedBox(height: 8),
-        TextButton(
-          onPressed: () => showDialog<void>(
-            context: context,
-            builder: (context) =>
-                PasswordResetDialog(repository: widget.repository),
+        Align(
+          alignment: Alignment.center,
+          child: TextButton.icon(
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (context) =>
+                  PasswordResetDialog(repository: widget.repository),
+            ),
+            icon: const Icon(Icons.key_outlined, size: 18),
+            label: const Text('Sifremi Unuttum'),
           ),
-          child: const Text('Sifremi Unuttum'),
         ),
       ],
     );
   }
 
   Widget _buildRegister(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return _AuthFormLayout(
       children: [
         TextField(
           controller: _registerName,
-          decoration: const InputDecoration(labelText: 'Ad Soyad'),
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            labelText: 'Ad Soyad',
+            prefixIcon: Icon(Icons.badge_outlined),
+          ),
         ),
         const SizedBox(height: 14),
         TextField(
           controller: _registerPhone,
-          decoration: const InputDecoration(labelText: 'Telefon'),
+          keyboardType: TextInputType.phone,
+          decoration: const InputDecoration(
+            labelText: 'Telefon',
+            prefixIcon: Icon(Icons.phone_outlined),
+          ),
         ),
         const SizedBox(height: 14),
         TextField(
           controller: _registerEmail,
-          decoration: const InputDecoration(labelText: 'Email'),
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(
+            labelText: 'Email',
+            prefixIcon: Icon(Icons.alternate_email_outlined),
+          ),
         ),
         const SizedBox(height: 14),
         TextField(
           controller: _registerPassword,
           obscureText: true,
-          decoration: const InputDecoration(labelText: 'Sifre'),
+          decoration: const InputDecoration(
+            labelText: 'Sifre',
+            prefixIcon: Icon(Icons.lock_outline),
+          ),
         ),
         const SizedBox(height: 18),
-        FilledButton(
-          onPressed: () async {
-            if (_registerName.text.trim().isEmpty ||
-                _registerPhone.text.trim().isEmpty ||
-                _registerEmail.text.trim().isEmpty ||
-                _registerPassword.text.length < 5) {
-              _showSnack(
-                context,
-                'Tum alanlari doldur ve sifreyi en az 5 karakter yap.',
-                true,
-              );
-              return;
-            }
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: () async {
+              if (_registerName.text.trim().isEmpty ||
+                  _registerPhone.text.trim().isEmpty ||
+                  _registerEmail.text.trim().isEmpty ||
+                  _registerPassword.text.length < 5) {
+                _showSnack(
+                  context,
+                  'Tum alanlari doldur ve sifreyi en az 5 karakter yap.',
+                  true,
+                );
+                return;
+              }
 
-            final error = await widget.repository.registerMember(
-              fullName: _registerName.text,
-              phone: _registerPhone.text,
-              email: _registerEmail.text,
-              password: _registerPassword.text,
-            );
-            if (!context.mounted) {
-              return;
-            }
-            if (error.isNotEmpty) {
-              _showSnack(context, error, true);
-            }
-          },
-          child: const Text('Kayit Ol'),
+              final error = await widget.repository.registerMember(
+                fullName: _registerName.text,
+                phone: _registerPhone.text,
+                email: _registerEmail.text,
+                password: _registerPassword.text,
+              );
+              if (!context.mounted) {
+                return;
+              }
+              if (error.isNotEmpty) {
+                _showSnack(context, error, true);
+              }
+            },
+            icon: const Icon(Icons.person_add_alt_1_outlined),
+            label: const Text('Kayit Ol'),
+          ),
         ),
       ],
     );
   }
 
   Widget _buildAdminLogin(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return _AuthFormLayout(
       children: [
         TextField(
           controller: _adminUser,
-          decoration: const InputDecoration(labelText: 'Kullanici Adi'),
+          decoration: const InputDecoration(
+            labelText: 'Kullanici Adi',
+            prefixIcon: Icon(Icons.admin_panel_settings_outlined),
+          ),
         ),
         const SizedBox(height: 14),
         TextField(
           controller: _adminPassword,
           obscureText: true,
-          decoration: const InputDecoration(labelText: 'Sifre'),
+          decoration: const InputDecoration(
+            labelText: 'Sifre',
+            prefixIcon: Icon(Icons.lock_outline),
+          ),
         ),
         const SizedBox(height: 18),
-        FilledButton(
-          onPressed: () async {
-            final error = await widget.repository.loginAdmin(
-              username: _adminUser.text,
-              password: _adminPassword.text,
-            );
-            if (!context.mounted) {
-              return;
-            }
-            if (error.isNotEmpty) {
-              _showSnack(context, error, true);
-            }
-          },
-          child: const Text('Admin Girisi'),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: () async {
+              final error = await widget.repository.loginAdmin(
+                username: _adminUser.text,
+                password: _adminPassword.text,
+              );
+              if (!context.mounted) {
+                return;
+              }
+              if (error.isNotEmpty) {
+                _showSnack(context, error, true);
+              }
+            },
+            icon: const Icon(Icons.verified_user_outlined),
+            label: const Text('Admin Girisi'),
+          ),
         ),
       ],
+    );
+  }
+}
+
+class _AuthCard extends StatelessWidget {
+  const _AuthCard({
+    required this.controller,
+    required this.memberLogin,
+    required this.register,
+    required this.adminLogin,
+  });
+
+  final TabController controller;
+  final Widget memberLogin;
+  final Widget register;
+  final Widget adminLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAF2FB),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.home_repair_service_outlined,
+                    color: Color(0xFF0B1F3A),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Servis Plus Mobile',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 18,
+                        ),
+                      ),
+                      Text(
+                        'Hesabina guvenli gecis',
+                        style: TextStyle(color: Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            TabBar(
+              controller: controller,
+              tabs: const [
+                Tab(text: 'Uye Giris'),
+                Tab(text: 'Kayit'),
+                Tab(text: 'Admin'),
+              ],
+            ),
+            const SizedBox(height: 18),
+            SizedBox(
+              height: 390,
+              child: TabBarView(
+                controller: controller,
+                children: [memberLogin, register, adminLogin],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AuthFormLayout extends StatelessWidget {
+  const _AuthFormLayout({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: children,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AuthShowcase extends StatelessWidget {
+  const _AuthShowcase({this.compact = false});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: BoxConstraints(minHeight: compact ? 250 : 560),
+      padding: EdgeInsets.all(compact ? 20 : 30),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF071A33), Color(0xFF123A66), Color(0xFFF8FAFC)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x300B1F3A),
+            blurRadius: 24,
+            offset: Offset(0, 14),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const _HeroBadge(label: 'Servis Plus Mobile'),
+          const SizedBox(height: 22),
+          Text(
+            'Teknik servis akisini elinin altina al.',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: compact ? 30 : 42,
+              height: 1.04,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Talep, fiyat onayi, servis takibi ve admin operasyonlari ayni mobil deneyimde.',
+            style: TextStyle(color: Color(0xFFEFF6FF), height: 1.45),
+          ),
+          if (!compact) const SizedBox(height: 28),
+          const _ServiceDeskIllustration(),
+          if (compact) const SizedBox(height: 6),
+        ],
+      ),
+    );
+  }
+}
+
+class _ServiceDeskIllustration extends StatelessWidget {
+  const _ServiceDeskIllustration();
+
+  @override
+  Widget build(BuildContext context) {
+    return AspectRatio(
+      aspectRatio: 1.42,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.94),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.white),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x26071A33),
+              blurRadius: 18,
+              offset: Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAF2FB),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.verified_outlined,
+                    color: Color(0xFF0B1F3A),
+                    size: 19,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Isletmemiz ne sunuyor?',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Color(0xFF0B1F3A),
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      Text(
+                        'Guvenli, hizli ve seffaf teknik servis deneyimi.',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 12,
+                          height: 1.25,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: const [
+                        Expanded(
+                          child: _BusinessHighlightTile(
+                            icon: Icons.flash_on_outlined,
+                            title: 'Hizli Islem',
+                            copy:
+                                'Talep alininca kayit acilir, servis sureci bekletmeden baslar.',
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: _BusinessHighlightTile(
+                            icon: Icons.price_check_outlined,
+                            title: 'Seffaf Fiyat',
+                            copy:
+                                'Fiyat kalemleri tek tek gorunur, onay senden gelmeden ilerlemez.',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: Row(
+                      children: const [
+                        Expanded(
+                          child: _BusinessHighlightTile(
+                            icon: Icons.engineering_outlined,
+                            title: 'Uzman Servis',
+                            copy:
+                                'Cihaz arizasi uzman ekip tarafindan kontrol edilir ve raporlanir.',
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: _BusinessHighlightTile(
+                            icon: Icons.notifications_active_outlined,
+                            title: 'Mobil Takip',
+                            copy:
+                                'Servis durumu, fiyat onayi ve teslim bilgisi panelden izlenir.',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BusinessHighlightTile extends StatelessWidget {
+  const _BusinessHighlightTile({
+    required this.icon,
+    required this.title,
+    required this.copy,
+  });
+
+  final IconData icon;
+  final String title;
+  final String copy;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEAF2FB),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: const Color(0xFF0B1F3A), size: 17),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF0B1F3A),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  copy,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 11,
+                    height: 1.22,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -521,6 +921,17 @@ class MemberDashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = repository.memberDashboard();
     final member = repository.currentMember;
+    final memberRequests = member == null
+        ? const <ServiceRecordView>[]
+        : repository.serviceViewsForMember(member.id);
+    final priceOffers = memberRequests
+        .where((item) => item.record.priceApprovalStatus == 'Onay Bekliyor')
+        .toList();
+    final completedNews = memberRequests
+        .where((item) => item.record.status == 'Tamamlandi')
+        .take(3)
+        .toList();
+
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
@@ -550,6 +961,23 @@ class MemberDashboardScreen extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 18),
+        if (priceOffers.isNotEmpty) ...[
+          _SectionCard(
+            title: 'Fiyat Onayi Bekleyen',
+            child: Column(
+              children: priceOffers
+                  .map(
+                    (item) => _MemberRequestCard(
+                      view: item,
+                      repository: repository,
+                      compact: true,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+          const SizedBox(height: 18),
+        ],
         _SectionCard(
           title: 'Son Talepler',
           child: Column(
@@ -557,11 +985,26 @@ class MemberDashboardScreen extends StatelessWidget {
                 ? const [Text('Henuz servis talebi bulunmuyor.')]
                 : data.recentRequests
                       .map(
-                        (item) => _ServiceTile(view: item, showMember: false),
+                        (item) => _MemberRequestCard(
+                          view: item,
+                          repository: repository,
+                          compact: true,
+                        ),
                       )
                       .toList(),
           ),
         ),
+        if (completedNews.isNotEmpty) ...[
+          const SizedBox(height: 18),
+          _SectionCard(
+            title: 'Servis Haberleri',
+            child: Column(
+              children: completedNews
+                  .map((item) => _ServiceNotificationCard(view: item))
+                  .toList(),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -584,9 +1027,16 @@ class MemberRequestsScreen extends StatelessWidget {
         _SectionCard(
           title: 'Tum Taleplerim',
           child: Column(
-            children: requests
-                .map((item) => _ServiceTile(view: item, showMember: false))
-                .toList(),
+            children: requests.isEmpty
+                ? const [Text('Henuz servis kaydin yok.')]
+                : requests
+                      .map(
+                        (item) => _MemberRequestCard(
+                          view: item,
+                          repository: repository,
+                        ),
+                      )
+                      .toList(),
           ),
         ),
       ],
@@ -621,19 +1071,35 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
+        const _FeatureHero(
+          icon: Icons.add_task_outlined,
+          badge: 'Yeni Talep',
+          title: 'Cihazini anlat, servis akisini baslatalim.',
+          copy:
+              'Marka, model ve ariza detayini eklediginde kayit servis ekibine duser.',
+          colors: [Color(0xFF115E59), Color(0xFF0F766E)],
+        ),
+        const SizedBox(height: 16),
         _SectionCard(
-          title: 'Yeni Servis Talebi',
+          title: 'Talep Bilgileri',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextField(
                 controller: _brand,
-                decoration: const InputDecoration(labelText: 'Marka'),
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Marka',
+                  prefixIcon: Icon(Icons.business_outlined),
+                ),
               ),
               const SizedBox(height: 14),
               TextField(
                 controller: _model,
-                decoration: const InputDecoration(labelText: 'Model'),
+                decoration: const InputDecoration(
+                  labelText: 'Model',
+                  prefixIcon: Icon(Icons.phone_android_outlined),
+                ),
               ),
               const SizedBox(height: 14),
               TextField(
@@ -641,43 +1107,49 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
                 maxLines: 4,
                 decoration: const InputDecoration(
                   labelText: 'Ariza Aciklamasi',
+                  prefixIcon: Icon(Icons.report_problem_outlined),
                 ),
               ),
               const SizedBox(height: 18),
-              FilledButton(
-                onPressed: () async {
-                  if (_brand.text.trim().isEmpty ||
-                      _model.text.trim().isEmpty ||
-                      _issue.text.trim().isEmpty) {
-                    _showSnack(
-                      context,
-                      'Tum alanlari doldurman gerekiyor.',
-                      true,
-                    );
-                    return;
-                  }
-                  final message = await widget.repository.createServiceRequest(
-                    brand: _brand.text,
-                    model: _model.text,
-                    issueDescription: _issue.text,
-                  );
-                  if (!context.mounted) {
-                    return;
-                  }
-                  if (message.isEmpty) {
-                    _showSnack(
-                      context,
-                      'Talep gonderilirken bir sorun olustu.',
-                      true,
-                    );
-                    return;
-                  }
-                  _brand.clear();
-                  _model.clear();
-                  _issue.clear();
-                  _showSnack(context, message, false);
-                },
-                child: const Text('Talep Gonder'),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () async {
+                    if (_brand.text.trim().isEmpty ||
+                        _model.text.trim().isEmpty ||
+                        _issue.text.trim().isEmpty) {
+                      _showSnack(
+                        context,
+                        'Tum alanlari doldurman gerekiyor.',
+                        true,
+                      );
+                      return;
+                    }
+                    final message = await widget.repository
+                        .createServiceRequest(
+                          brand: _brand.text,
+                          model: _model.text,
+                          issueDescription: _issue.text,
+                        );
+                    if (!context.mounted) {
+                      return;
+                    }
+                    if (message.isEmpty) {
+                      _showSnack(
+                        context,
+                        'Talep gonderilirken bir sorun olustu.',
+                        true,
+                      );
+                      return;
+                    }
+                    _brand.clear();
+                    _model.clear();
+                    _issue.clear();
+                    _showSnack(context, message, false);
+                  },
+                  icon: const Icon(Icons.send_outlined),
+                  label: const Text('Talep Gonder'),
+                ),
               ),
             ],
           ),
@@ -722,53 +1194,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final member = widget.repository.currentMember!;
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
+        _ProfileSummaryCard(member: member),
+        const SizedBox(height: 16),
         _SectionCard(
           title: 'Profil Bilgileri',
           child: Column(
             children: [
               TextField(
                 controller: _fullName,
-                decoration: const InputDecoration(labelText: 'Ad Soyad'),
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Ad Soyad',
+                  prefixIcon: Icon(Icons.badge_outlined),
+                ),
               ),
               const SizedBox(height: 14),
               TextField(
                 controller: _phone,
-                decoration: const InputDecoration(labelText: 'Telefon'),
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Telefon',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                ),
               ),
               const SizedBox(height: 14),
               TextField(
                 controller: _email,
-                decoration: const InputDecoration(labelText: 'Email'),
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  prefixIcon: Icon(Icons.alternate_email_outlined),
+                ),
               ),
               const SizedBox(height: 14),
               TextField(
                 controller: _newPassword,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: 'Yeni Sifre'),
+                decoration: const InputDecoration(
+                  labelText: 'Yeni Sifre',
+                  prefixIcon: Icon(Icons.lock_reset_outlined),
+                ),
               ),
               const SizedBox(height: 18),
-              FilledButton(
-                onPressed: () async {
-                  final error = await widget.repository.updateProfile(
-                    fullName: _fullName.text,
-                    phone: _phone.text,
-                    email: _email.text,
-                    newPassword: _newPassword.text,
-                  );
-                  if (!context.mounted) {
-                    return;
-                  }
-                  if (error.isNotEmpty) {
-                    _showSnack(context, error, true);
-                    return;
-                  }
-                  _newPassword.clear();
-                  _showSnack(context, 'Profilin guncellendi.', false);
-                },
-                child: const Text('Profili Guncelle'),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () async {
+                    final error = await widget.repository.updateProfile(
+                      fullName: _fullName.text,
+                      phone: _phone.text,
+                      email: _email.text,
+                      newPassword: _newPassword.text,
+                    );
+                    if (!context.mounted) {
+                      return;
+                    }
+                    if (error.isNotEmpty) {
+                      _showSnack(context, error, true);
+                      return;
+                    }
+                    _newPassword.clear();
+                    _showSnack(context, 'Profilin guncellendi.', false);
+                  },
+                  icon: const Icon(Icons.save_outlined),
+                  label: const Text('Profili Guncelle'),
+                ),
               ),
             ],
           ),
@@ -964,99 +1458,37 @@ class ServicesScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Servis kayitlarini burada MVC tarafindaki gibi duzenleyebilir, islem secip durumu guncelleyebilirsin.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFF94A3B8),
-                ),
-              ),
+        _FeatureHero(
+          icon: Icons.build_circle_outlined,
+          badge: 'Servis Merkezi',
+          title: '${services.length} servis kaydi tek akista.',
+          copy:
+              'Kayitlari kompakt izle, satiri acip fiyat kalemlerini ve operasyon detaylarini guncelle.',
+          colors: const [Color(0xFF312E81), Color(0xFF0F766E)],
+          action: FilledButton.icon(
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (context) =>
+                  CreateServiceRecordDialog(repository: repository),
             ),
-            const SizedBox(width: 12),
-            FilledButton.icon(
-              onPressed: () => showDialog<void>(
-                context: context,
-                builder: (context) =>
-                    CreateServiceRecordDialog(repository: repository),
-              ),
-              icon: const Icon(Icons.build_outlined),
-              label: const Text('Servis Kaydi Ekle'),
-            ),
-          ],
+            icon: const Icon(Icons.add),
+            label: const Text('Servis Ekle'),
+          ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         _SectionCard(
           title: 'Servis Kayitlari',
           child: Column(
-            children: services
-                .map(
-                  (item) => _ServiceTile(
-                    view: item,
-                    trailing: Wrap(
-                      spacing: 8,
-                      children: [
-                        IconButton.filledTonal(
-                          tooltip: 'Duzenle',
-                          onPressed: () => showDialog<void>(
-                            context: context,
-                            builder: (context) => EditServiceRecordDialog(
-                              repository: repository,
-                              record: item.record,
-                            ),
-                          ),
-                          icon: const Icon(Icons.edit_outlined),
+            children: services.isEmpty
+                ? const [Text('Servis kaydi bulunmuyor.')]
+                : services
+                      .map(
+                        (item) => _AdminServiceExpansionCard(
+                          view: item,
+                          repository: repository,
                         ),
-                        IconButton.filledTonal(
-                          tooltip: 'Sil',
-                          style: IconButton.styleFrom(
-                            foregroundColor: const Color(0xFFFCA5A5),
-                          ),
-                          onPressed: () async {
-                            final shouldDelete = await showDialog<bool>(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('Servis kaydi silinsin mi?'),
-                                content: Text(
-                                  '${item.device.brand} ${item.device.model} kaydi kaldirilacak.',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(false),
-                                    child: const Text('Vazgec'),
-                                  ),
-                                  FilledButton(
-                                    onPressed: () =>
-                                        Navigator.of(context).pop(true),
-                                    child: const Text('Sil'),
-                                  ),
-                                ],
-                              ),
-                            );
-                            if (shouldDelete != true || !context.mounted) {
-                              return;
-                            }
-                            final error = await repository.deleteServiceRecord(
-                              item.record.id,
-                            );
-                            if (!context.mounted) {
-                              return;
-                            }
-                            if (error.isNotEmpty) {
-                              _showSnack(context, error, true);
-                              return;
-                            }
-                            _showSnack(context, 'Servis kaydi silindi.', false);
-                          },
-                          icon: const Icon(Icons.delete_outline),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-                .toList(),
+                      )
+                      .toList(),
           ),
         ),
       ],
@@ -1107,7 +1539,7 @@ class _ActionCatalogScreenState extends State<ActionCatalogScreen> {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFF94A3B8),
+                  color: const Color(0xFF64748B),
                 ),
               ),
             ),
@@ -1299,9 +1731,9 @@ class _ActionCatalogTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF111827),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF1F2937)),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1326,7 +1758,7 @@ class _ActionCatalogTile extends StatelessWidget {
             '${action.priceRangeLabel} • Ort. ${action.price.toStringAsFixed(0)} TL',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Color(0xFF94A3B8)),
+            style: const TextStyle(color: Color(0xFF64748B)),
           ),
           if (action.description.trim().isNotEmpty) ...[
             const SizedBox(height: 6),
@@ -1334,7 +1766,7 @@ class _ActionCatalogTile extends StatelessWidget {
               action.description,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Color(0xFFCBD5E1), height: 1.35),
+              style: const TextStyle(color: Color(0xFF475569), height: 1.35),
             ),
           ],
           const SizedBox(height: 8),
@@ -1391,12 +1823,16 @@ class AdminPasswordDialog extends StatefulWidget {
 }
 
 class _AdminPasswordDialogState extends State<AdminPasswordDialog> {
+  late final TextEditingController _username = TextEditingController(
+    text: widget.repository.activeAdminUsername ?? '',
+  );
   final _current = TextEditingController();
   final _newPassword = TextEditingController();
   final _repeat = TextEditingController();
 
   @override
   void dispose() {
+    _username.dispose();
     _current.dispose();
     _newPassword.dispose();
     _repeat.dispose();
@@ -1412,21 +1848,38 @@ class _AdminPasswordDialogState extends State<AdminPasswordDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
+              controller: _username,
+              decoration: const InputDecoration(
+                labelText: 'Kullanici Adi',
+                prefixIcon: Icon(Icons.admin_panel_settings_outlined),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
               controller: _current,
               obscureText: true,
-              decoration: const InputDecoration(labelText: 'Mevcut Sifre'),
+              decoration: const InputDecoration(
+                labelText: 'Mevcut Sifre',
+                prefixIcon: Icon(Icons.lock_outline),
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _newPassword,
               obscureText: true,
-              decoration: const InputDecoration(labelText: 'Yeni Sifre'),
+              decoration: const InputDecoration(
+                labelText: 'Yeni Sifre',
+                prefixIcon: Icon(Icons.lock_reset_outlined),
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _repeat,
               obscureText: true,
-              decoration: const InputDecoration(labelText: 'Yeni Sifre Tekrar'),
+              decoration: const InputDecoration(
+                labelText: 'Yeni Sifre Tekrar',
+                prefixIcon: Icon(Icons.lock_reset_outlined),
+              ),
             ),
           ],
         ),
@@ -1438,11 +1891,23 @@ class _AdminPasswordDialogState extends State<AdminPasswordDialog> {
         ),
         FilledButton(
           onPressed: () async {
-            if (_newPassword.text.length < 5) {
+            final username = _username.text.trim();
+            final passwordWillChange =
+                _newPassword.text.isNotEmpty || _repeat.text.isNotEmpty;
+
+            if (username.length < 3 || username.length > 50) {
+              _showSnack(
+                context,
+                'Kullanici adi 3-50 karakter arasinda olmali.',
+                true,
+              );
+              return;
+            }
+            if (passwordWillChange && _newPassword.text.length < 5) {
               _showSnack(context, 'Yeni sifre en az 5 karakter olmali.', true);
               return;
             }
-            if (_newPassword.text != _repeat.text) {
+            if (passwordWillChange && _newPassword.text != _repeat.text) {
               _showSnack(context, 'Yeni sifreler eslesmiyor.', true);
               return;
             }
@@ -1450,6 +1915,7 @@ class _AdminPasswordDialogState extends State<AdminPasswordDialog> {
             final error = await widget.repository.changeAdminPassword(
               currentPassword: _current.text,
               newPassword: _newPassword.text,
+              newUsername: username,
             );
             if (!context.mounted) {
               return;
@@ -1459,7 +1925,7 @@ class _AdminPasswordDialogState extends State<AdminPasswordDialog> {
               return;
             }
             Navigator.of(context).pop();
-            _showSnack(context, 'Admin sifresi guncellendi.', false);
+            _showSnack(context, 'Admin hesabi guncellendi.', false);
           },
           child: const Text('Guncelle'),
         ),
@@ -1685,7 +2151,7 @@ class _CreateDeviceDialogState extends State<CreateDeviceDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             DropdownButtonFormField<int>(
-              initialValue: selectedMemberId,
+              value: selectedMemberId,
               items: widget.repository.members
                   .map(
                     (member) => DropdownMenuItem(
@@ -1782,7 +2248,7 @@ class _CreateServiceRecordDialogState extends State<CreateServiceRecordDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<int>(
-                initialValue: selectedDeviceId,
+                value: selectedDeviceId,
                 items: widget.repository.devices
                     .map(
                       (device) => DropdownMenuItem(
@@ -1796,7 +2262,7 @@ class _CreateServiceRecordDialogState extends State<CreateServiceRecordDialog> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                initialValue: status,
+                value: status,
                 items: serviceStatusOptions
                     .map(
                       (item) =>
@@ -1899,7 +2365,7 @@ class _EditServiceRecordDialogState extends State<EditServiceRecordDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<int>(
-                initialValue: selectedDeviceId,
+                value: selectedDeviceId,
                 items: widget.repository.devices
                     .map(
                       (device) => DropdownMenuItem(
@@ -1917,7 +2383,7 @@ class _EditServiceRecordDialogState extends State<EditServiceRecordDialog> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                initialValue: status,
+                value: status,
                 items: serviceStatusOptions
                     .map(
                       (item) =>
@@ -2120,14 +2586,14 @@ class _SelectorStat extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
+        color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF1F2937)),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF94A3B8))),
+          Text(label, style: const TextStyle(color: Color(0xFF64748B))),
           const SizedBox(height: 4),
           Text(
             value,
@@ -2184,13 +2650,13 @@ class _ActionSelectorGroup extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: selected
-                  ? const Color(0xFF0F2F2E)
-                  : const Color(0xFF111827),
+                  ? const Color(0xFFDDF7EE)
+                  : const Color(0xFFF8FAFC),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: selected
-                    ? const Color(0xFF22C55E)
-                    : const Color(0xFF1F2937),
+                    ? const Color(0xFF0F766E)
+                    : const Color(0xFFE2E8F0),
               ),
             ),
             child: Row(
@@ -2221,7 +2687,7 @@ class _ActionSelectorGroup extends StatelessWidget {
                           Text(
                             '${action.price.toStringAsFixed(0)} TL',
                             style: const TextStyle(
-                              color: Color(0xFF93C5FD),
+                              color: Color(0xFF0F766E),
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -2232,7 +2698,7 @@ class _ActionSelectorGroup extends StatelessWidget {
                         action.priceRangeLabel,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Color(0xFF5EEAD4)),
+                        style: const TextStyle(color: Color(0xFF0369A1)),
                       ),
                       if (action.description.trim().isNotEmpty) ...[
                         const SizedBox(height: 4),
@@ -2240,7 +2706,7 @@ class _ActionSelectorGroup extends StatelessWidget {
                           action.description,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Color(0xFFCBD5E1)),
+                          style: const TextStyle(color: Color(0xFF64748B)),
                         ),
                       ],
                     ],
@@ -2606,6 +3072,691 @@ String _shortCategoryLabel(String category) {
   };
 }
 
+String _money(double value) => '${value.toStringAsFixed(0)} TL';
+
+String _formatDate(DateTime value) {
+  final local = value.toLocal();
+  return '${local.day.toString().padLeft(2, '0')}.${local.month.toString().padLeft(2, '0')}.${local.year}';
+}
+
+String _formatDateTime(DateTime value) {
+  final local = value.toLocal();
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
+  return '${_formatDate(local)} $hour:$minute';
+}
+
+bool _isPriceOfferPending(ServiceRecordView view) {
+  return view.record.priceApprovalStatus == 'Onay Bekliyor';
+}
+
+bool _looksLikeError(String message) {
+  final lower = message.toLowerCase();
+  return lower.contains('bulunamadi') ||
+      lower.contains('hata') ||
+      lower.contains('hatali') ||
+      lower.contains('yok') ||
+      lower.contains('sorun') ||
+      lower.contains('basarisiz');
+}
+
+class _FeatureHero extends StatelessWidget {
+  const _FeatureHero({
+    required this.icon,
+    required this.badge,
+    required this.title,
+    required this.copy,
+    required this.colors,
+    this.action,
+  });
+
+  final IconData icon;
+  final String badge;
+  final String title;
+  final String copy;
+  final List<Color> colors;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        gradient: LinearGradient(
+          colors: colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1F0F172A),
+            blurRadius: 20,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: Icon(icon, color: Colors.white),
+              ),
+              const Spacer(),
+              _HeroBadge(label: badge),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              height: 1.08,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            copy,
+            style: const TextStyle(color: Color(0xFFEFF6FF), height: 1.42),
+          ),
+          if (action != null) ...[
+            const SizedBox(height: 16),
+            Align(alignment: Alignment.centerLeft, child: action!),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileSummaryCard extends StatelessWidget {
+  const _ProfileSummaryCard({required this.member});
+
+  final Member member;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 30,
+            backgroundColor: const Color(0xFFDDF7EE),
+            foregroundColor: const Color(0xFF0F766E),
+            child: Text(
+              member.fullName.trim().isEmpty
+                  ? 'U'
+                  : member.fullName.trim().characters.first.toUpperCase(),
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  member.fullName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${member.email} • ${member.phone}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Color(0xFF64748B)),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _MiniPill(
+                      label: 'Kayit ${_formatDate(member.registeredAt)}',
+                    ),
+                    _MiniPill(
+                      label: member.lastLoginAt == null
+                          ? 'Ilk giris'
+                          : 'Son giris ${_formatDate(member.lastLoginAt!)}',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ServiceNotificationCard extends StatelessWidget {
+  const _ServiceNotificationCard({required this.view});
+
+  final ServiceRecordView view;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFBBF7D0)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.notifications_active_outlined,
+            color: Color(0xFF16A34A),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${view.device.brand} ${view.device.model} hazir',
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Servis islemi tamamlandi. Teslim icin servis noktasina gelebilirsin.',
+                  style: const TextStyle(color: Color(0xFF166534)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MemberRequestCard extends StatelessWidget {
+  const _MemberRequestCard({
+    required this.view,
+    required this.repository,
+    this.compact = false,
+  });
+
+  final ServiceRecordView view;
+  final AppRepository repository;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final awaitingOffer = _isPriceOfferPending(view);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: awaitingOffer ? const Color(0xFFFFFBEB) : Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: awaitingOffer
+              ? const Color(0xFFFDE68A)
+              : const Color(0xFFE2E8F0),
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F0F172A),
+            blurRadius: 16,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: awaitingOffer
+                      ? const Color(0xFFFEF3C7)
+                      : const Color(0xFFE6F6F1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  awaitingOffer
+                      ? Icons.price_check_outlined
+                      : Icons.phone_android_outlined,
+                  color: awaitingOffer
+                      ? const Color(0xFFD97706)
+                      : const Color(0xFF0F766E),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${view.device.brand} ${view.device.model}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      view.device.issueDescription,
+                      maxLines: compact ? 1 : 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    _formatDate(view.record.date),
+                    style: const TextStyle(
+                      color: Color(0xFF64748B),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _StatusChip(status: view.record.status),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _PriceBreakdown(view: view, dense: compact && !awaitingOffer),
+          if (awaitingOffer) ...[
+            const SizedBox(height: 12),
+            _OfferDecisionBar(view: view, repository: repository),
+          ] else if (view.record.priceApprovalStatus.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _MiniPill(label: 'Fiyat onayi: ${view.record.priceApprovalStatus}'),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _OfferDecisionBar extends StatelessWidget {
+  const _OfferDecisionBar({required this.view, required this.repository});
+
+  final ServiceRecordView view;
+  final AppRepository repository;
+
+  Future<void> _answer(BuildContext context, bool accepted) async {
+    final message = await repository.answerPriceOffer(
+      serviceId: view.record.id,
+      accepted: accepted,
+    );
+    if (!context.mounted) {
+      return;
+    }
+    _showSnack(
+      context,
+      message.isEmpty ? 'Fiyat onayi guncellendi.' : message,
+      _looksLikeError(message),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+      ),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        alignment: WrapAlignment.end,
+        children: [
+          SizedBox(
+            width: 130,
+            child: Text(
+              'Teklifi yanitla',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+            ),
+          ),
+          TextButton.icon(
+            onPressed: () => _answer(context, false),
+            icon: const Icon(Icons.close_outlined),
+            label: const Text('Reddet'),
+          ),
+          FilledButton.icon(
+            onPressed: () => _answer(context, true),
+            icon: const Icon(Icons.check_outlined),
+            label: const Text('Kabul Et'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PriceBreakdown extends StatelessWidget {
+  const _PriceBreakdown({required this.view, this.dense = false});
+
+  final ServiceRecordView view;
+  final bool dense;
+
+  @override
+  Widget build(BuildContext context) {
+    if (view.actions.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: const Text(
+          'Fiyat kalemleri servis incelemesinden sonra gorunecek.',
+          style: TextStyle(color: Color(0xFF64748B)),
+        ),
+      );
+    }
+
+    final visibleActions = dense ? view.actions.take(2).toList() : view.actions;
+    final hiddenCount = view.actions.length - visibleActions.length;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        children: [
+          ...visibleActions.map((action) => _PriceLine(action: action)),
+          if (hiddenCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: _MiniPill(label: '+$hiddenCount islem daha'),
+              ),
+            ),
+          const Divider(height: 18),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Toplam teklif',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+              Text(
+                _money(view.record.totalPrice),
+                style: const TextStyle(
+                  color: Color(0xFF0F766E),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PriceLine extends StatelessWidget {
+  const _PriceLine({required this.action});
+
+  final ServiceAction action;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 9),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE0F2FE),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.handyman_outlined,
+              size: 16,
+              color: Color(0xFF0369A1),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  action.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                if (action.description.trim().isNotEmpty)
+                  Text(
+                    action.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF64748B),
+                      fontSize: 12,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            _money(action.price),
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminServiceExpansionCard extends StatelessWidget {
+  const _AdminServiceExpansionCard({
+    required this.view,
+    required this.repository,
+  });
+
+  final ServiceRecordView view;
+  final AppRepository repository;
+
+  Future<void> _delete(BuildContext context) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Servis kaydi silinsin mi?'),
+        content: Text(
+          '${view.member.fullName} - ${view.device.brand} ${view.device.model} kaydi kaldirilacak.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Vazgec'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Sil'),
+          ),
+        ],
+      ),
+    );
+    if (shouldDelete != true || !context.mounted) {
+      return;
+    }
+    final error = await repository.deleteServiceRecord(view.record.id);
+    if (!context.mounted) {
+      return;
+    }
+    if (error.isNotEmpty) {
+      _showSnack(context, error, true);
+      return;
+    }
+    _showSnack(context, 'Servis kaydi silindi.', false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 14),
+        leading: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE6F6F1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(
+            Icons.build_outlined,
+            color: Color(0xFF0F766E),
+            size: 20,
+          ),
+        ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                view.member.fullName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              _formatDate(view.record.date),
+              style: const TextStyle(
+                color: Color(0xFF64748B),
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${view.device.brand} ${view.device.model}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              _StatusChip(status: view.record.status),
+            ],
+          ),
+        ),
+        children: [
+          _InfoLine(
+            icon: Icons.report_problem_outlined,
+            text: view.device.issueDescription,
+          ),
+          _InfoLine(
+            icon: Icons.person_outline,
+            text: '${view.member.phone} • ${view.member.email}',
+          ),
+          const SizedBox(height: 8),
+          _PriceBreakdown(view: view),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.end,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (context) => EditServiceRecordDialog(
+                    repository: repository,
+                    record: view.record,
+                  ),
+                ),
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Duzenle'),
+              ),
+              FilledButton.tonal(
+                onPressed: () => _delete(context),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.delete_outline),
+                    SizedBox(width: 8),
+                    Text('Sil'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ServiceTile extends StatelessWidget {
   const _ServiceTile({
     required this.view,
@@ -2623,18 +3774,43 @@ class _ServiceTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111827),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF1F2937)),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F0F172A),
+            blurRadius: 14,
+            offset: Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '${view.device.brand} ${view.device.model}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${view.device.brand} ${view.device.model}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _formatDate(view.record.date),
+                style: const TextStyle(
+                  color: Color(0xFF64748B),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           Wrap(
@@ -2644,9 +3820,7 @@ class _ServiceTile extends StatelessWidget {
               _StatusChip(status: view.record.status),
               if (view.record.priceApprovalStatus.isNotEmpty)
                 _MiniPill(label: 'Onay: ${view.record.priceApprovalStatus}'),
-              _MiniPill(
-                label: '${view.record.totalPrice.toStringAsFixed(0)} TL',
-              ),
+              _MiniPill(label: _money(view.record.totalPrice)),
             ],
           ),
           if (trailing != null) ...[
@@ -2684,14 +3858,14 @@ class _InfoLine extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: const Color(0xFF94A3B8)),
+          Icon(icon, size: 18, color: const Color(0xFF64748B)),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Color(0xFFCBD5E1), height: 1.35),
+              style: const TextStyle(color: Color(0xFF475569), height: 1.35),
             ),
           ),
         ],
@@ -2759,6 +3933,7 @@ class _StatusChip extends StatelessWidget {
     };
 
     return Container(
+      constraints: const BoxConstraints(maxWidth: 170),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
@@ -2785,16 +3960,16 @@ class _MiniPill extends StatelessWidget {
       constraints: const BoxConstraints(maxWidth: 220),
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
+        color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFF334155)),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Text(
         label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(
-          color: Color(0xFFCBD5E1),
+          color: Color(0xFF334155),
           fontSize: 12,
           fontWeight: FontWeight.w800,
         ),
